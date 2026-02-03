@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: serif ,Arial, Helvetica;
+}
+
+
+            /*                    scroll bar custom css                  */
+/* For Firefox */
+* {
+  scrollbar-width: thin;          /* thin | auto | none */
+  scrollbar-color: #333 #111;     /* thumb color   track color (background) */
+}
+
+/* For Chrome, Edge, Safari (WebKit) */
+*::-webkit-scrollbar {
+  width: 8px;                     /* scrollbar thickness */
+  height: 8px;                    /* for horizontal scrollbar if any */
+}
+
+*::-webkit-scrollbar-track {
+  background: #111;               /* ← this is the track / background color you want to change */
+  border-radius: 10px;            /* optional: rounded corners */
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #555;               /* thumb/handle color */
+  border-radius: 10px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #777;               /* hover effect */
+}
+
+/* Optional: Dark mode specific colors */
+.dark *::-webkit-scrollbar-track {
+  background: #0a0a0a;            /* darker background in dark mode */
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background: #444;
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+
+/* To animate Mobile list from bottim to up */
+@keyframes slide-up-from-bottom {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up-from-bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;   /* 20s = slow rotation, change to 10s for faster */
+}
