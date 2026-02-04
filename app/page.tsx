@@ -2,9 +2,10 @@
 
   import Image from "next/image";
   import SideBarList from "./components/sideBarList";
-  import { Play, Pause, SkipBack, SkipForward, Volume2, Repeat, Shuffle, MoreHorizontal, ChevronDown, List } from 'lucide-react';
+  import { Play, Pause, SkipBack, SkipForward, Volume2, Repeat, Shuffle, MoreHorizontal, User, ChevronDown, List } from 'lucide-react';
   import { useEffect, useRef, useState } from "react";
   import mockSongs from "./data/data";
+import { spec } from "node:test/reporters";
 
 
   interface Song {
@@ -168,20 +169,77 @@
 
         <div className=" flex flex-col w-full lg:w-[77%] h-screen ">
           
-          <div className=" h-[83%] flex lg:items-center ">
-            <div className="  w-[80%] max-w-6xl h-[60%] mt-24 md:mt-12 mx-auto lg:my-auto rounded-2xl flex flex-col lg:flex-row gap-12 "
-            >
-              <img className={` w:full lg:w-1/2 h-full rounded-2xl overflow-hidden object-cover ${play ? "animate-bounce" : ""} `}
-              src={special.coverUrl} alt={special.title} />
-              <div className=" flex flex-col flex-1 justify-center min-w-0 gap-2 lg:gap-6 ">
-                <span className=" text-gray-400 text-center lg:text-start ">Now Playing</span>
-                <span className=" text-6xl truncate font-medium text-center lg:text-start "> {special.title} </span>
-                <span className=" text-gray-400 text-center lg:text-start ">{special.artist}</span>
-                <span className=" text-gray-400 text-center lg:text-start "> {special.album} </span>
+          <div className="h-[83%] flex items-center justify-center px-5 sm:px-8 bg-linear-to-b from-gray-950 to-black relative overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none">
+              <img
+                src={special.coverUrl}
+                alt=""
+                className="w-full h-full object-cover blur-xl scale-125 opacity-35"
+              />
+              <div className="absolute inset-0 bg-lineat-to-t from-black/85 via-black/60 to-transparent" />
+            </div>
+
+            <div className="
+              relative w-full max-w-5xl mx-auto 
+              flex flex-col lg:flex-row items-center lg:items-start 
+              gap-10 lg:gap-16 
+              py-6 lg:py-0
+            ">
+              <div className="relative shrink-0 w-64 sm:w-80 lg:w-95 aspect-square">
+                <div className={`
+                  absolute inset-0 rounded-3xl blur-2xl transition-opacity duration-1000
+                  ${play ? 'bg-white/15 opacity-80' : 'opacity-0'}
+                `} />
+
+                <img
+                  className={`
+                    relative w-full h-full rounded-2xl sm:rounded-3xl object-cover
+                    shadow-2xl shadow-black/70 border border-white/5
+                    transition-all duration-700 ease-out
+                    ${play 
+                      ? 'scale-[1.03] brightness-110 ring-1 ring-white/20' 
+                      : 'hover:scale-[1.02] hover:brightness-105'
+                    }
+                  `}
+                  src={special.coverUrl}
+                  alt={special.title}
+                />
+
+                {play && (
+                  <div className="absolute -bottom-2 -right-2 w-5 h-5 bg-green-500 rounded-full shadow-lg flex items-center justify-center animate-pulse">
+                    <div className="w-2.5 h-2.5 bg-white rounded-full" />
+                  </div>
+                )}
               </div>
 
+              <div className="flex flex-col items-center lg:items-start gap-4 lg:gap-6 text-center lg:text-left max-w-xl">
+                <span className="text-sm sm:text-base uppercase tracking-wider font-medium text-green-300/70">
+                  Now Playing
+                </span>
+
+                <h1 className="
+                  text-4xl sm:text-5xl lg:text-6xl 
+                  font-bold leading-tight tracking-tight 
+                  text-white line-clamp-2
+                ">
+                  {special.title}
+                </h1>
+
+                <div className="flex items-center gap-3 text-green-100/90 text-xl sm:text-2xl">
+                  <User size={26} className="text-green-400/80" />
+                  <span className="font-medium">{special.artist}</span>
+                </div>
+
+                <span className="text-lg sm:text-xl text-gray-300/80 italic">
+                  {special.album}
+                </span>
+
+                <div className="flex items-center gap-3 mt-2 text-sm text-gray-400">
+                  <div className={`w-2.5 h-2.5 rounded-full ${play ? 'bg-green-500 animate-ping' : 'bg-gray-600'}`} />
+                  <span>{play ? 'Playing' : 'Paused'}</span>
+                </div>
+              </div>
             </div>
-            
           </div>
 
           <div className=" bg-[#181818] h-[17%] flex flex-col items-center justify-center px-4 lg:px-12 gap-4">
