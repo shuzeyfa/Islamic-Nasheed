@@ -11,6 +11,7 @@ type playerState = {
     duration: number,
     volume: number,      // 0 to 1
     muted: boolean,
+    status: "idle" | "loading" | "ready" | "error",
 
     // Action
     setcurrentSong: (song: Song) => void,
@@ -20,6 +21,7 @@ type playerState = {
     setDuration: (duration: number) => void,
     setVolume: (volume: number) => void,
     toggleMute: () => void,
+    setStatus: (status: playerState["status"]) => void,
 
 }
 
@@ -33,6 +35,7 @@ export const usePlayerStore = create<playerState>()(
             duration: 0,
             volume: 1,
             muted: false,
+            status: "idle",
             play: () => set({isplaying: true}),
             pause: () => set({ isplaying: false}),
             setcurrentSong: (value: Song) => set({currentSong: value}),
@@ -43,6 +46,7 @@ export const usePlayerStore = create<playerState>()(
                 muted: false, // moving the slider always unmutes
             }),
             toggleMute: () => set((s) => ({ muted: !s.muted })),
+            setStatus: (status) => set({ status }),
         }),
         {
             name: "player-settings",

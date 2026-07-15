@@ -1,7 +1,7 @@
 "use client"
 
 import SideBarList from "./components/sideBarList";
-import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, User, ChevronDown, List, Volume2, Volume1, VolumeX } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, User, ChevronDown, List, Volume2, Volume1, VolumeX, Search, X, Loader2, AlertCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from "react";
 import mockSongs from "./data/data";
 import type { Song } from "@/app/type/song";
@@ -12,12 +12,22 @@ import { useQueueStore } from "./store/queueStore";
 
 export default function Home() {
 
-  const {isplaying, play, pause, currentSong, currentTime, duration, setDuration, setCurrentTime, volume, muted, setVolume, toggleMute} = usePlayerStore();
+  const {isplaying, play, pause, currentSong, currentTime, duration, setDuration, setCurrentTime, volume, muted, setVolume, toggleMute, status, setStatus} = usePlayerStore();
   const { toggleShuffle, next, previous, shuffle, repeat, cycleRepeat } = useQueueStore();
 
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [mobileList, setmobileList] = useState<boolean>(false);
+  const [search, setSearch] = useState<string>("");
+
+  const query = search.trim().toLowerCase();
+  const filteredSongs = query
+    ? mockSongs.filter(
+        (s) =>
+          s.title.toLowerCase().includes(query) ||
+          s.artist.toLowerCase().includes(query)
+      )
+    : mockSongs;
   
   
 
@@ -65,6 +75,20 @@ export default function Home() {
     audio.addEventListener("loadedmetadata", setAudioDuration);
     audio.addEventListener("ended", handleEnded);
 
+    // loading / buffering / error status
+    const onLoadStart = () => setStatus("loading");
+    const onWaiting = () => setStatus("loading");
+    const onCanPlay = () => setStatus("ready");
+    const onError = () => {
+      setStatus("error");
+      pause(); // don't pretend to be playing a broken stream
+    };
+    audio.addEventListener("loadstart", onLoadStart);
+    audio.addEventListener("waiting", onWaiting);
+    audio.addEventListener("canplay", onCanPlay);
+    audio.addEventListener("playing", onCanPlay);
+    audio.addEventListener("error", onError);
+
     if (isplaying) {
       audio.play().catch(() => {});
     }
@@ -73,8 +97,13 @@ export default function Home() {
       audio.removeEventListener("timeupdate", updateTime);
       audio.removeEventListener("loadedmetadata", setAudioDuration);
       audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("loadstart", onLoadStart);
+      audio.removeEventListener("waiting", onWaiting);
+      audio.removeEventListener("canplay", onCanPlay);
+      audio.removeEventListener("playing", onCanPlay);
+      audio.removeEventListener("error", onError);
     };
-  }, [currentSong, isplaying, next, pause, setCurrentTime, setDuration]);
+  }, [currentSong, isplaying, next, pause, setCurrentTime, setDuration, setStatus]);
 
   // restore persisted settings (volume, shuffle, repeat, last song) after mount
   // skipHydration + manual rehydrate avoids a server/client HTML mismatch
@@ -191,15 +220,35 @@ export default function Home() {
     <div className=" flex w-screen ">
       <audio src={currentSong.audioUrl} ref={audioRef}  />
       <div className=" h-screen w-[23%] bg-[#181818] lg:flex flex-col md:p-2 gap-y-3 pt-4 overflow-auto hidden   ">
-        <div className="flex flex-col px-4 py-3">
-          <h1 className="text-xl font-semibold">Queue</h1>
-          <span className="text-sm text-gray-400">
-            {mockSongs.length} tracks
-          </span>
+        <div className="flex flex-col px-4 py-3 gap-3">
+          <div>
+            <h1 className="text-xl font-semibold">Queue</h1>
+            <span className="text-sm text-gray-400">
+              {filteredSongs.length} {query ? `of ${mockSongs.length}` : ""} tracks
+            </span>
+          </div>
+          <div className="flex items-center gap-2 bg-[#282828] rounded-full px-3 py-2">
+            <Search size={16} className="text-gray-400 shrink-0" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search title or artist..."
+              className="bg-transparent outline-none text-sm w-full placeholder:text-gray-500"
+            />
+            {search && (
+              <button onClick={() => setSearch("")} className="text-gray-400 hover:text-white shrink-0">
+                <X size={16} />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className=" gap-y-4 flex flex-col ">
-          {mockSongs.map((song) => (
+          {filteredSongs.length === 0 && (
+            <span className="text-sm text-gray-500 px-4">No tracks match &quot;{search}&quot;</span>
+          )}
+          {filteredSongs.map((song) => (
             <div key={song.id} className=" hover:bg-gray-900 rounded-2xl ">
               <SideBarList 
                 song={song}
@@ -287,8 +336,22 @@ export default function Home() {
               </span>
 
               <div className="flex items-center gap-3 mt-2 text-sm text-gray-400">
-                <div className={`w-2.5 h-2.5 rounded-full ${isplaying ? 'bg-green-500 animate-ping' : 'bg-gray-600'}`} />
-                <span>{isplaying ? 'Playing' : 'Paused'}</span>
+                {status === "error" ? (
+                  <>
+                    <AlertCircle size={16} className="text-red-400" />
+                    <span className="text-red-400">Couldn&apos;t load this track — try another or skip</span>
+                  </>
+                ) : status === "loading" && isplaying ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin text-green-400" />
+                    <span>Buffering…</span>
+                  </>
+                ) : (
+                  <>
+                    <div className={`w-2.5 h-2.5 rounded-full ${isplaying ? 'bg-green-500 animate-ping' : 'bg-gray-600'}`} />
+                    <span>{isplaying ? 'Playing' : 'Paused'}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -358,7 +421,9 @@ export default function Home() {
                 }}
                 className="w-9 h-9 flex items-center justify-center border border-white/30 rounded-full hover:bg-white/10 transition"
               >
-                {isplaying ? (
+                {status === "loading" && isplaying ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : isplaying ? (
                   <Pause className="w-4 h-4" />
                 ) : (
                   <Play className="w-4 h-4 translate-x-px" />
@@ -435,7 +500,26 @@ export default function Home() {
             <div className=" text-[#b3b3b3] " onClick={() => setmobileList(!mobileList)} > <ChevronDown /> </div>
           </div>
 
-          {mockSongs.map((song: Song) => (
+          <div className="flex items-center gap-2 bg-[#282828] rounded-full px-3 py-2 mx-3 mt-3">
+            <Search size={16} className="text-gray-400 shrink-0" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search title or artist..."
+              className="bg-transparent outline-none text-sm w-full placeholder:text-gray-500"
+            />
+            {search && (
+              <button onClick={() => setSearch("")} className="text-gray-400 hover:text-white shrink-0">
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
+          {filteredSongs.length === 0 && (
+            <span className="text-sm text-gray-500 px-4 py-3">No tracks match &quot;{search}&quot;</span>
+          )}
+          {filteredSongs.map((song: Song) => (
             <div key={song.id} >
               <SideBarList song={song} current = {currentSong.id} 
               onSelect={(selectedSong) => {
