@@ -2,6 +2,8 @@
 
 import SideBarList from "./components/sideBarList";
 import Visualizer from "./components/Visualizer";
+import VisualizerRing from "./components/VisualizerRing";
+import { useDominantColor } from "./lib/useDominantColor";
 import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, User, ChevronDown, List, Volume2, Volume1, VolumeX, Search, X, Loader2, AlertCircle, Heart } from 'lucide-react';
 import { useEffect, useRef, useState } from "react";
 import mockSongs from "./data/data";
@@ -25,6 +27,9 @@ export default function Home() {
   const [likedOnly, setLikedOnly] = useState<boolean>(false);
   // while scrubbing: preview position in seconds, null when not dragging
   const [dragTime, setDragTime] = useState<number | null>(null);
+
+  // dominant color of the current cover, as an "r, g, b" triplet
+  const themeColor = useDominantColor(currentSong.coverUrl);
 
   const query = search.trim().toLowerCase();
   const filteredSongs = mockSongs.filter((s) => {
@@ -299,19 +304,31 @@ export default function Home() {
               className="w-full h-full object-cover blur-xl scale-125 opacity-35"
             />
             <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/60 to-transparent" />
+            {/* ambient tint from the cover's dominant color */}
+            <div
+              className="absolute inset-0 transition-[background] duration-1000"
+              style={{
+                background: `radial-gradient(ellipse at 35% 40%, rgba(${themeColor}, ${isplaying ? 0.22 : 0.10}), transparent 65%)`,
+              }}
+            />
           </div>
 
           <div className="
-            relative w-full max-w-5xl mx-auto 
-            flex flex-col lg:flex-row items-center lg:items-start 
-            gap-10 lg:gap-16 
+            relative w-full max-w-5xl mx-auto
+            flex flex-col lg:flex-row items-center lg:items-start
+            gap-10 lg:gap-16
             py-6 lg:py-0
           ">
             <div className="relative shrink-0 w-64 sm:w-80 lg:w-95 aspect-square">
-              <div className={`
-                absolute inset-0 rounded-3xl blur-2xl transition-opacity duration-1000
-                ${isplaying ? 'bg-white/15 opacity-80' : 'opacity-0'}
-              `} />
+              <div
+                className={`
+                  absolute inset-0 rounded-3xl blur-2xl transition-all duration-1000
+                  ${isplaying ? 'opacity-80' : 'opacity-0'}
+                `}
+                style={{ backgroundColor: `rgba(${themeColor}, 0.25)` }}
+              />
+
+              <VisualizerRing audioRef={audioRef} isplaying={isplaying} color={themeColor} />
 
               <img
                 className={`
@@ -335,7 +352,10 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col items-center lg:items-start gap-4 lg:gap-6 text-center lg:text-left max-w-xl">
-              <span className="text-sm sm:text-base uppercase tracking-wider font-medium text-green-300/70">
+              <span
+                className="text-sm sm:text-base uppercase tracking-wider font-medium transition-colors duration-1000"
+                style={{ color: `rgba(${themeColor}, 0.85)` }}
+              >
                 Now Playing
               </span>
 
@@ -362,7 +382,7 @@ export default function Home() {
               </div>
 
               <div className="flex items-center gap-3 text-green-100/90 text-xl sm:text-2xl">
-                <User size={26} className="text-green-400/80" />
+                <User size={26} className="transition-colors duration-1000" style={{ color: `rgba(${themeColor}, 0.8)` }} />
                 <span className="font-medium">{currentSong.artist}</span>
               </div>
 
@@ -383,14 +403,15 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    <div className={`w-2.5 h-2.5 rounded-full ${isplaying ? 'bg-green-500 animate-ping' : 'bg-gray-600'}`} />
+                    <div className={`w-2.5 h-2.5 rounded-full ${isplaying ? 'animate-ping' : ''}`}
+                      style={{ backgroundColor: isplaying ? `rgb(${themeColor})` : '#4b5563' }} />
                     <span>{isplaying ? 'Playing' : 'Paused'}</span>
                   </>
                 )}
               </div>
 
               <div className="w-full max-w-md">
-                <Visualizer audioRef={audioRef} isplaying={isplaying} />
+                <Visualizer audioRef={audioRef} isplaying={isplaying} color={themeColor} />
               </div>
             </div>
           </div>

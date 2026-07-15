@@ -1,42 +1,24 @@
 "use client"
 
 import { useEffect, useRef } from "react";
-
-// Web Audio graph is created once per <audio> element and reused —
-// createMediaElementSource throws if called twice on the same element.
-let audioCtx: AudioContext | null = null;
-let analyser: AnalyserNode | null = null;
-let connectedElement: HTMLAudioElement | null = null;
-
-function getAnalyser(audio: HTMLAudioElement): AnalyserNode | null {
-    try {
-        if (!audioCtx) {
-            audioCtx = new AudioContext();
-        }
-        if (connectedElement !== audio) {
-            const source = audioCtx.createMediaElementSource(audio);
-            analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 256; // 128 frequency bins
-            analyser.smoothingTimeConstant = 0.8;
-            source.connect(analyser);
-            analyser.connect(audioCtx.destination); // keep audio audible
-            connectedElement = audio;
-        }
-        return analyser;
-    } catch {
-        return null;
-    }
-}
+import { getAnalyser } from "../lib/audioGraph";
 
 export default function Visualizer({
     audioRef,
     isplaying,
+    color = "34, 197, 94", // rgb triplet, green-500 by default
 }: {
     audioRef: React.RefObject<HTMLAudioElement | null>;
     isplaying: boolean;
+    color?: string;
 }) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const rafRef = useRef<number>(0);
+    // keep latest color in a ref so the draw loop picks it up without restarting
+    const colorRef = useRef(color);
+    useEffect(() => {
+        colorRef.current = color;
+    }, [color]);
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -45,8 +27,6 @@ export default function Visualizer({
 
         const node = getAnalyser(audio);
         if (!node) return;
-        // browsers suspend AudioContext until a user gesture — resume on play
-        audioCtx?.resume().catch(() => {});
 
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
@@ -83,8 +63,8 @@ export default function Visualizer({
                 const x = i * barWidth;
 
                 const gradient = ctx.createLinearGradient(0, height, 0, height - barHeight);
-                gradient.addColorStop(0, "rgba(34, 197, 94, 0.9)");   // green-500
-                gradient.addColorStop(1, "rgba(134, 239, 172, 0.6)"); // green-300
+                gradient.addColorStop(0, `rgba(${colorRef.current}, 0.9)`);
+                gradient.addColorStop(1, `rgba(${colorRef.current}, 0.45)`);
                 ctx.fillStyle = gradient;
 
                 // rounded-top bars, mirrored around the center line
