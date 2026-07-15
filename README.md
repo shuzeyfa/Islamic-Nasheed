@@ -1,61 +1,82 @@
-🎧 Islamic Nasheed Player
+# 🎧 Islamic Nasheed Player
 
-A modern Islamic nasheed music player built with Next.js, React, and Tailwind CSS.
-This app lets users listen to a curated collection of nasheeds with a smooth, Spotify-like experience — queue, shuffle, progress tracking, and responsive design included.
+A modern, Spotify-inspired Islamic nasheed player built with **Next.js, React, TypeScript, Zustand, and the Web Audio API**.
 
-Built as a personal project to practice real-world frontend patterns and audio handling in the browser.
+Streams a curated collection of nasheeds (Maher Zain, Sami Yusuf, Harris J, Malak Fathi, and more) with real-time audio visualization, dynamic per-song theming, OS-level media integration, and a fully responsive UI.
 
-✨ Features
+## ✨ Features
 
-▶️ Play / Pause audio
+### Playback
+- ▶️ Play / pause, next / previous track
+- 🔀 Shuffle with **play history** — "previous" retraces the songs you actually heard
+- 🔁 Three repeat modes: off / repeat-all (queue wraps) / repeat-one
+- ⏮️ Smart previous: >3s into a track restarts it, press again to go back
+- ⏱️ **Draggable seek bar** with scrub preview and hover handle (pointer-capture, touch-friendly)
+- 🔊 Volume slider + mute with adaptive icon
+- 🚦 Buffering spinner and graceful error state for failed streams
 
-⏭️ Next & Previous track
+### Visual
+- 🌈 **Real-time audio visualizer** — 48 frequency bars driven by a Web Audio `AnalyserNode`, rendered on canvas at 60fps
+- 💫 **Circular visualizer ring** — 96 radial bars orbiting the album art, mirrored spectrum, DPI-aware rendering
+- 🎨 **Dynamic color theme** — the dominant color of each cover is extracted on a canvas and tints the ambient glow, visualizers, and accents, transitioning smoothly per song
+- 📱 Fully responsive: desktop queue sidebar, mobile slide-up drawer
 
-🔀 Shuffle mode
+### Integration & UX
+- 🖥️ **Media Session API** — control playback from keyboard media keys, lock screen, and the OS media overlay, with cover art metadata
+- ⌨️ **Keyboard shortcuts** — `Space` play/pause · `←/→` seek ±5s · `↑/↓` volume · `M` mute · `S` shuffle · `R` repeat · `N/P` next/previous
+- 💾 **Persistence** — volume, mute, shuffle, repeat, queue position, and favorites survive reloads (Zustand `persist` with SSR-safe manual rehydration)
+- ❤️ **Favorites** — like songs from the hero or queue rows, filter the queue to liked-only
+- 🔍 **Search** — live filter by title or artist
+- 🕐 Real track durations learned from audio metadata and cached
 
-📜 Queue sidebar (desktop & mobile)
+## 🛠️ Tech Stack
 
-📱 Fully responsive layout
+| | |
+|---|---|
+| Framework | Next.js (App Router) + React 19 |
+| Language | TypeScript |
+| State | Zustand (4 stores: player, queue, favorites, durations) |
+| Styling | Tailwind CSS v4 |
+| Audio | HTML5 Audio + Web Audio API (`AnalyserNode`) |
+| Icons | Lucide React |
 
-⏱️ Live progress bar with seek
+## 📐 Architecture Notes
 
-🎨 Clean, minimal UI inspired by modern music apps
+- **Single source of truth**: the queue store owns navigation (`next`/`previous`/`setcurrentIndex`) and syncs the player store's `currentSong` itself — no drift between index and song, no duplicated sync logic in the UI.
+- **Shared audio graph** (`app/lib/audioGraph.ts`): `createMediaElementSource` can only be called once per element, so one `AudioContext` + `AnalyserNode` is created lazily and shared by both visualizers.
+- **SSR-safe persistence**: stores use `skipHydration` and rehydrate manually after mount, avoiding Next.js hydration mismatches.
+- **Dominant color extraction** (`app/lib/useDominantColor.ts`): covers are downsampled to 24×24 on a canvas; pixels scored by saturation + lightness so vibrant hues win over grays; dark picks are brightened for visibility on the dark UI.
 
-🕌 Curated Islamic nasheed collection
+## 📂 Project Structure
 
-🛠️ Tech Stack
-
-Next.js (App Router)
-
-React
-
-TypeScript
-
-Tailwind CSS
-
-HTML5 Audio API
-
-Lucide Icons
-
-📂 Project Structure
+```
 app/
  ├─ components/
- │   └─ SideBarList.tsx
- ├─ data/
- │   └─ data.ts
- ├─ page.tsx
- └─ globals.css
+ │   ├─ sideBarList.tsx      # queue row (cover, like, duration)
+ │   ├─ Visualizer.tsx       # linear frequency bars
+ │   └─ VisualizerRing.tsx   # radial bars around the cover
+ ├─ lib/
+ │   ├─ audioGraph.ts        # shared AudioContext + AnalyserNode
+ │   └─ useDominantColor.ts  # cover → theme color
+ ├─ store/
+ │   ├─ playerStore.tsx      # song, playback, volume, status
+ │   ├─ queueStore.tsx       # index, shuffle, repeat, history
+ │   ├─ favoritesStore.tsx   # liked song ids
+ │   └─ durationsStore.tsx   # real durations cache
+ ├─ data/data.tsx            # nasheed collection
+ ├─ type/song.tsx            # Song interface
+ └─ page.tsx                 # player UI
+```
 
-🚀 Getting Started
-1️⃣ Clone the repository
+## 🚀 Getting Started
+
+```bash
 git clone https://github.com/your-username/islamic-nasheed-player.git
 cd islamic-nasheed-player
-
-2️⃣ Install dependencies
 npm install
-
-3️⃣ Run the development server
 npm run dev
+```
 
+Open [http://localhost:3000](http://localhost:3000) and press play.
 
-Open http://localhost:3000 in your browser.
+> Audio streams from archive.org; covers are served locally.

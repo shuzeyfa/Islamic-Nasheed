@@ -1,6 +1,7 @@
 import { Heart } from "lucide-react";
 import type { Song } from "../type/song";
 import { useFavoritesStore } from "../store/favoritesStore";
+import { useDurationsStore, formatDuration } from "../store/durationsStore";
 
 
 export default function SideBarList({song, current,  onSelect} : {song: Song; current: number, onSelect: (song: Song) => void;}){
@@ -8,6 +9,9 @@ export default function SideBarList({song, current,  onSelect} : {song: Song; cu
     const same = current === song.id;
     const { likedIds, toggleLike } = useFavoritesStore();
     const liked = likedIds.includes(song.id);
+    // prefer the real duration once we've heard the track's metadata
+    const realDuration = useDurationsStore((s) => s.durations[song.id]);
+    const displayDuration = realDuration ? formatDuration(realDuration) : song.duration;
 
     return (
         <div onClick={() => onSelect(song)}
@@ -42,7 +46,7 @@ export default function SideBarList({song, current,  onSelect} : {song: Song; cu
                 />
             </button>
             <div className={` ${same ? "text-green-300 " : "text-gray-500"}  `}>
-               { song.duration}
+               { displayDuration}
             </div>
 
 

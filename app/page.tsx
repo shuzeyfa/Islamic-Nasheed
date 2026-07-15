@@ -11,6 +11,7 @@ import type { Song } from "@/app/type/song";
 import { usePlayerStore } from "./store/playerStore";
 import { useQueueStore } from "./store/queueStore";
 import { useFavoritesStore } from "./store/favoritesStore";
+import { useDurationsStore } from "./store/durationsStore";
 
 
 
@@ -62,6 +63,11 @@ export default function Home() {
 
     const setAudioDuration = () => {
       setDuration(audio.duration || 0);
+      // cache the real duration for the queue list
+      useDurationsStore.getState().setSongDuration(
+        usePlayerStore.getState().currentSong.id,
+        audio.duration
+      );
     };
 
     const handleEnded = () => {
@@ -123,6 +129,7 @@ export default function Home() {
     usePlayerStore.persist.rehydrate();
     useQueueStore.persist.rehydrate();
     useFavoritesStore.persist.rehydrate();
+    useDurationsStore.persist.rehydrate();
     // point currentSong at the restored queue position
     const { currentIndex } = useQueueStore.getState();
     usePlayerStore.getState().setcurrentSong(mockSongs[currentIndex]);
