@@ -1,14 +1,4 @@
-import Image from "next/image";
-
-interface Song {
-  id: number;
-  title: string;
-  artist: string;
-  album: string;
-  duration: string;
-  coverUrl: string;
-  audioUrl: String;
-}
+import type { Song } from "../type/song";
 
 
 export default function SideBarList({song, current,  onSelect} : {song: Song; current: number, onSelect: (song: Song) => void;}){

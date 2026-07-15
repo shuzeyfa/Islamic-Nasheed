@@ -1,11 +1,10 @@
 "use client"
 
-import Image from "next/image";
 import SideBarList from "./components/sideBarList";
-import { Play, Pause, SkipBack, SkipForward, Volume2, Repeat, Shuffle, MoreHorizontal, User, ChevronDown, List } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, User, ChevronDown, List } from 'lucide-react';
 import { useEffect, useRef, useState } from "react";
 import mockSongs from "./data/data";
-import type {Song} from "@/app/type/song.tsx";
+import type { Song } from "@/app/type/song";
 import { usePlayerStore } from "./store/playerStore";
 import { useQueueStore } from "./store/queueStore";
 
@@ -13,7 +12,7 @@ import { useQueueStore } from "./store/queueStore";
 
 export default function Home() {
 
-  const {isplaying, play, pause, currentSong, setcurrentSong, currentTime, duration, setDuration, setCurrentTime} = usePlayerStore();
+  const {isplaying, play, pause, currentSong, currentTime, duration, setDuration, setCurrentTime} = usePlayerStore();
   const { toggleShuffle, next, previous, shuffle } = useQueueStore();
 
   
@@ -44,7 +43,13 @@ export default function Home() {
     };
 
     const handleEnded = () => {
-      next(); 
+      const { currentIndex, shuffle } = useQueueStore.getState();
+      if (!shuffle && currentIndex === mockSongs.length - 1) {
+        // end of queue: stop instead of staying stuck on "Playing"
+        pause();
+      } else {
+        next();
+      }
     };
 
     audio.addEventListener("timeupdate", updateTime);
@@ -60,11 +65,11 @@ export default function Home() {
       audio.removeEventListener("loadedmetadata", setAudioDuration);
       audio.removeEventListener("ended", handleEnded);
     };
-  }, [currentSong, isplaying, next, setCurrentTime, setDuration]);
+  }, [currentSong, isplaying, next, pause, setCurrentTime, setDuration]);
 
   return (
     <div className=" flex w-screen ">
-      <audio src={currentSong.audioUrl as string} ref={audioRef}  />
+      <audio src={currentSong.audioUrl} ref={audioRef}  />
       <div className=" h-screen w-[23%] bg-[#181818] lg:flex flex-col md:p-2 gap-y-3 pt-4 overflow-auto hidden   ">
         <div className="flex flex-col px-4 py-3">
           <h1 className="text-xl font-semibold">Queue</h1>
@@ -84,7 +89,6 @@ export default function Home() {
                   if (newIndex === -1) return;
 
                   useQueueStore.getState().setcurrentIndex(newIndex);
-                  setcurrentSong(selectedSong);
                   play();
                 }}
                 />
@@ -104,7 +108,7 @@ export default function Home() {
               alt=""
               className="w-full h-full object-cover blur-xl scale-125 opacity-35"
             />
-            <div className="absolute inset-0 bg-lineat-to-t from-black/85 via-black/60 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/60 to-transparent" />
           </div>
 
           <div className="
@@ -221,9 +225,6 @@ export default function Home() {
                 className="w-8 h-8 flex items-center justify-center text-white/70 hover:text-white transition"
                 onClick={() => {
                   previous();
-                  // After previous, get new index and update song
-                  const newIndex = useQueueStore.getState().currentIndex;
-                  setcurrentSong(mockSongs[newIndex]);
                 }}
               >
                 <SkipBack className="w-4 h-4" />
@@ -253,8 +254,6 @@ export default function Home() {
                 className="w-8 h-8 flex items-center justify-center text-white/70 hover:text-white transition"
                 onClick={() => {
                   next();
-                  const newIndex = useQueueStore.getState().currentIndex;
-                  setcurrentSong(mockSongs[newIndex]);
                 }}
               >
                 <SkipForward className="w-4 h-4" />
@@ -310,10 +309,9 @@ export default function Home() {
                 if (newIndex === -1) return;
 
                 useQueueStore.getState().setcurrentIndex(newIndex);
-                setcurrentSong(selectedSong);
                 play();
 
-                setmobileList(false); 
+                setmobileList(false);
 
               }}
               />
