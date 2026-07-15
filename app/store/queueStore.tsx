@@ -1,16 +1,21 @@
 import {create} from "zustand";
+import { persist } from "zustand/middleware";
 import mockSongs from "../data/data";
 import { usePlayerStore } from "./playerStore";
+
+export type RepeatMode = "off" | "all" | "one";
 
 type queueState = {
     //state
     currentIndex: number,
     shuffle: boolean,
+    repeat: RepeatMode,
 
     //Action
     next: () => void,
     previous: () => void,
     toggleShuffle: () => void,
+    cycleRepeat: () => void,
     setcurrentIndex: (newindex: number) => void,
 }
 
@@ -19,9 +24,12 @@ const syncSong = (index: number) => {
     usePlayerStore.getState().setcurrentSong(mockSongs[index]);
 };
 
-export const useQueueStore = create<queueState>((set, get) => ({
+export const useQueueStore = create<queueState>()(
+    persist(
+        (set, get) => ({
     currentIndex: 0,
     shuffle: false,
+    repeat: "off",
 
     next: () => {
         const state = get();
@@ -31,8 +39,11 @@ export const useQueueStore = create<queueState>((set, get) => ({
             do {
                 newIndex = Math.floor(Math.random() * mockSongs.length);
             } while (newIndex === state.currentIndex && mockSongs.length > 1);
+        } else if (state.currentIndex === mockSongs.length - 1) {
+            // last track: wrap to the start when repeating, otherwise stay
+            newIndex = state.repeat === "all" ? 0 : state.currentIndex;
         } else {
-            newIndex = Math.min(state.currentIndex + 1, mockSongs.length - 1);
+            newIndex = state.currentIndex + 1;
         }
 
         set({ currentIndex: newIndex });
@@ -40,7 +51,11 @@ export const useQueueStore = create<queueState>((set, get) => ({
     },
 
     previous: () => {
-        const newIndex = Math.max(get().currentIndex - 1, 0);
+        const state = get();
+        // first track + repeat-all wraps to the end
+        const newIndex = state.currentIndex === 0
+            ? (state.repeat === "all" ? mockSongs.length - 1 : 0)
+            : state.currentIndex - 1;
         set({ currentIndex: newIndex });
         syncSong(newIndex);
     },
@@ -51,5 +66,15 @@ export const useQueueStore = create<queueState>((set, get) => ({
         syncSong(clamped);
     },
     toggleShuffle: () => set((s) => ({ shuffle: !s.shuffle })),
+    cycleRepeat: () => set((s) => ({
+        repeat: s.repeat === "off" ? "all" : s.repeat === "all" ? "one" : "off",
+    })),
 
-}))
+        }),
+        {
+            name: "queue-settings",
+            partialize: (s) => ({ currentIndex: s.currentIndex, shuffle: s.shuffle, repeat: s.repeat }),
+            skipHydration: true,
+        }
+    )
+)
