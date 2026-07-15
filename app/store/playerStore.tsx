@@ -12,6 +12,7 @@ type playerState = {
     volume: number,      // 0 to 1
     muted: boolean,
     status: "idle" | "loading" | "ready" | "error",
+    playbackRate: number,
 
     // Action
     setcurrentSong: (song: Song) => void,
@@ -22,6 +23,7 @@ type playerState = {
     setVolume: (volume: number) => void,
     toggleMute: () => void,
     setStatus: (status: playerState["status"]) => void,
+    cyclePlaybackRate: () => void,
 
 }
 
@@ -36,6 +38,7 @@ export const usePlayerStore = create<playerState>()(
             volume: 1,
             muted: false,
             status: "idle",
+            playbackRate: 1,
             play: () => set({isplaying: true}),
             pause: () => set({ isplaying: false}),
             setcurrentSong: (value: Song) => set({currentSong: value}),
@@ -47,11 +50,16 @@ export const usePlayerStore = create<playerState>()(
             }),
             toggleMute: () => set((s) => ({ muted: !s.muted })),
             setStatus: (status) => set({ status }),
+            cyclePlaybackRate: () => set((s) => {
+                const rates = [0.75, 1, 1.25, 1.5, 2];
+                const i = rates.indexOf(s.playbackRate);
+                return { playbackRate: rates[(i + 1) % rates.length] };
+            }),
         }),
         {
             name: "player-settings",
             // only persist user preferences, not transient playback state
-            partialize: (s) => ({ volume: s.volume, muted: s.muted }),
+            partialize: (s) => ({ volume: s.volume, muted: s.muted, playbackRate: s.playbackRate }),
             // rehydrate manually after mount to avoid SSR hydration mismatch
             skipHydration: true,
         }

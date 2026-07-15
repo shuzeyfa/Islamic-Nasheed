@@ -3,6 +3,7 @@
 import SideBarList from "./components/sideBarList";
 import Visualizer from "./components/Visualizer";
 import VisualizerRing from "./components/VisualizerRing";
+import SleepTimer from "./components/SleepTimer";
 import { useDominantColor } from "./lib/useDominantColor";
 import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, User, ChevronDown, List, Volume2, Volume1, VolumeX, Search, X, Loader2, AlertCircle, Heart } from 'lucide-react';
 import { useEffect, useRef, useState } from "react";
@@ -17,7 +18,7 @@ import { useDurationsStore } from "./store/durationsStore";
 
 export default function Home() {
 
-  const {isplaying, play, pause, currentSong, currentTime, duration, setDuration, setCurrentTime, volume, muted, setVolume, toggleMute, status, setStatus} = usePlayerStore();
+  const {isplaying, play, pause, currentSong, currentTime, duration, setDuration, setCurrentTime, volume, muted, setVolume, toggleMute, status, setStatus, playbackRate, cyclePlaybackRate} = usePlayerStore();
   const { toggleShuffle, next, previous, shuffle, repeat, cycleRepeat } = useQueueStore();
   const { likedIds, toggleLike } = useFavoritesStore();
 
@@ -31,6 +32,39 @@ export default function Home() {
 
   // dominant color of the current cover, as an "r, g, b" triplet
   const themeColor = useDominantColor(currentSong.coverUrl);
+
+  // A-B loop: repeat a section (e.g. to memorize a verse). null = unset
+  const [loopA, setLoopA] = useState<number | null>(null);
+  const [loopB, setLoopB] = useState<number | null>(null);
+
+  const handleLoopButton = () => {
+    if (loopA === null) {
+      setLoopA(currentTime);            // 1st press: mark A
+    } else if (loopB === null) {
+      if (currentTime > loopA + 1) {
+        setLoopB(currentTime);          // 2nd press: mark B, loop active
+      }
+    } else {
+      setLoopA(null);                   // 3rd press: clear
+      setLoopB(null);
+    }
+  };
+
+  // enforce the loop while playing
+  useEffect(() => {
+    if (loopA === null || loopB === null) return;
+    if (currentTime >= loopB && audioRef.current) {
+      audioRef.current.currentTime = loopA;
+    }
+  }, [currentTime, loopA, loopB]);
+
+  // reset the loop when the song changes (adjust-state-during-render pattern)
+  const [loopSongId, setLoopSongId] = useState(currentSong.id);
+  if (loopSongId !== currentSong.id) {
+    setLoopSongId(currentSong.id);
+    setLoopA(null);
+    setLoopB(null);
+  }
 
   const query = search.trim().toLowerCase();
   const filteredSongs = mockSongs.filter((s) => {
@@ -141,7 +175,8 @@ export default function Home() {
     if (!audio) return;
     audio.volume = volume;
     audio.muted = muted;
-  }, [volume, muted]);
+    audio.playbackRate = playbackRate;
+  }, [volume, muted, playbackRate, currentSong]);
 
   // keyboard shortcuts: Space play/pause, arrows seek/volume, M mute, S shuffle, R repeat
   useEffect(() => {
@@ -463,6 +498,23 @@ export default function Home() {
                   ${dragTime !== null ? "opacity-100 scale-110" : "opacity-0 group-hover:opacity-100"} transition-opacity`}
                 style={{ left: duration > 0 ? `${((dragTime ?? currentTime) / duration) * 100}%` : "0%" }}
               />
+              {/* A-B loop markers */}
+              {loopA !== null && duration > 0 && (
+                <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1 h-3.5 rounded-full bg-yellow-400"
+                  style={{ left: `${(loopA / duration) * 100}%` }} />
+              )}
+              {loopB !== null && duration > 0 && (
+                <>
+                  <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1 h-3.5 rounded-full bg-yellow-400"
+                    style={{ left: `${(loopB / duration) * 100}%` }} />
+                  {/* highlighted looped region */}
+                  <div className="absolute top-0 h-full bg-yellow-400/20 pointer-events-none"
+                    style={{
+                      left: `${((loopA ?? 0) / duration) * 100}%`,
+                      width: `${((loopB - (loopA ?? 0)) / duration) * 100}%`,
+                    }} />
+                </>
+              )}
             </div>
             <span className="text-white/90 text-sm font-medium text-right">
               {getCurrentTime(duration)}
@@ -477,7 +529,23 @@ export default function Home() {
                 className={`justify-self-start ${shuffle ? "text-white" : "text-gray-400"}`}
               >
                 <Shuffle />
-              </button>  
+              </button>
+              <button
+                onClick={cyclePlaybackRate}
+                className={`text-xs font-semibold w-10 text-center py-1 rounded-full transition
+                  ${playbackRate !== 1 ? "bg-white/15 text-white" : "text-gray-400 hover:text-white"}`}
+                title="Playback speed"
+              >
+                {playbackRate}x
+              </button>
+              <button
+                onClick={handleLoopButton}
+                className={`text-xs font-semibold px-2 py-1 rounded-full transition
+                  ${loopB !== null ? "bg-white/15 text-white" : loopA !== null ? "text-white" : "text-gray-400 hover:text-white"}`}
+                title={loopA === null ? "Set loop start (A)" : loopB === null ? "Set loop end (B)" : "Clear A-B loop"}
+              >
+                {loopA === null ? "A-B" : loopB === null ? "A-?" : "A-B ✓"}
+              </button>
               <button
                 className={`lg:hidden transition ${repeat !== "off" ? "text-green-400" : "text-gray-400 hover:text-white"}`}
                 onClick={cycleRepeat}
@@ -536,6 +604,7 @@ export default function Home() {
 
             
             <div className=" justify-self-end flex items-center gap-3 ">
+              <SleepTimer audioRef={audioRef} />
               <div className="hidden lg:flex items-center gap-2 group">
                 <button
                   onClick={toggleMute}
