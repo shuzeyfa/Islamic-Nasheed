@@ -1,12 +1,14 @@
 "use client"
 
 import SideBarList from "./components/sideBarList";
-import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, User, ChevronDown, List, Volume2, Volume1, VolumeX, Search, X, Loader2, AlertCircle } from 'lucide-react';
+import Visualizer from "./components/Visualizer";
+import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, User, ChevronDown, List, Volume2, Volume1, VolumeX, Search, X, Loader2, AlertCircle, Heart } from 'lucide-react';
 import { useEffect, useRef, useState } from "react";
 import mockSongs from "./data/data";
 import type { Song } from "@/app/type/song";
 import { usePlayerStore } from "./store/playerStore";
 import { useQueueStore } from "./store/queueStore";
+import { useFavoritesStore } from "./store/favoritesStore";
 
 
 
@@ -14,22 +16,25 @@ export default function Home() {
 
   const {isplaying, play, pause, currentSong, currentTime, duration, setDuration, setCurrentTime, volume, muted, setVolume, toggleMute, status, setStatus} = usePlayerStore();
   const { toggleShuffle, next, previous, shuffle, repeat, cycleRepeat } = useQueueStore();
+  const { likedIds, toggleLike } = useFavoritesStore();
 
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [mobileList, setmobileList] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
+  const [likedOnly, setLikedOnly] = useState<boolean>(false);
   // while scrubbing: preview position in seconds, null when not dragging
   const [dragTime, setDragTime] = useState<number | null>(null);
 
   const query = search.trim().toLowerCase();
-  const filteredSongs = query
-    ? mockSongs.filter(
-        (s) =>
-          s.title.toLowerCase().includes(query) ||
-          s.artist.toLowerCase().includes(query)
-      )
-    : mockSongs;
+  const filteredSongs = mockSongs.filter((s) => {
+    if (likedOnly && !likedIds.includes(s.id)) return false;
+    if (!query) return true;
+    return (
+      s.title.toLowerCase().includes(query) ||
+      s.artist.toLowerCase().includes(query)
+    );
+  });
   
   
 
@@ -112,6 +117,7 @@ export default function Home() {
   useEffect(() => {
     usePlayerStore.persist.rehydrate();
     useQueueStore.persist.rehydrate();
+    useFavoritesStore.persist.rehydrate();
     // point currentSong at the restored queue position
     const { currentIndex } = useQueueStore.getState();
     usePlayerStore.getState().setcurrentSong(mockSongs[currentIndex]);
@@ -220,13 +226,24 @@ export default function Home() {
 
   return (
     <div className=" flex w-screen ">
-      <audio src={currentSong.audioUrl} ref={audioRef}  />
+      <audio src={currentSong.audioUrl} ref={audioRef} crossOrigin="anonymous" />
       <div className=" h-screen w-[23%] bg-[#181818] lg:flex flex-col md:p-2 gap-y-3 pt-4 overflow-auto hidden   ">
         <div className="flex flex-col px-4 py-3 gap-3">
           <div>
-            <h1 className="text-xl font-semibold">Queue</h1>
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-semibold">Queue</h1>
+              <button
+                onClick={() => setLikedOnly(!likedOnly)}
+                className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full transition
+                  ${likedOnly ? "bg-green-500/20 text-green-400" : "text-gray-400 hover:text-white"}`}
+                title="Show favorites only"
+              >
+                <Heart size={14} className={likedOnly ? "fill-green-400" : ""} />
+                {likedIds.length}
+              </button>
+            </div>
             <span className="text-sm text-gray-400">
-              {filteredSongs.length} {query ? `of ${mockSongs.length}` : ""} tracks
+              {filteredSongs.length} {query || likedOnly ? `of ${mockSongs.length}` : ""} tracks
             </span>
           </div>
           <div className="flex items-center gap-2 bg-[#282828] rounded-full px-3 py-2">
@@ -248,7 +265,9 @@ export default function Home() {
 
         <div className=" gap-y-4 flex flex-col ">
           {filteredSongs.length === 0 && (
-            <span className="text-sm text-gray-500 px-4">No tracks match &quot;{search}&quot;</span>
+            <span className="text-sm text-gray-500 px-4">
+              {likedOnly && !query ? "No favorites yet — tap the heart on a song" : `No tracks match "${search}"`}
+            </span>
           )}
           {filteredSongs.map((song) => (
             <div key={song.id} className=" hover:bg-gray-900 rounded-2xl ">
@@ -320,13 +339,27 @@ export default function Home() {
                 Now Playing
               </span>
 
-              <h1 className="
-                text-4xl sm:text-5xl lg:text-6xl 
-                font-bold leading-tight tracking-tight 
-                text-white line-clamp-2
-              ">
-                {currentSong.title}
-              </h1>
+              <div className="flex items-center gap-4">
+                <h1 className="
+                  text-4xl sm:text-5xl lg:text-6xl
+                  font-bold leading-tight tracking-tight
+                  text-white line-clamp-2
+                ">
+                  {currentSong.title}
+                </h1>
+                <button
+                  onClick={() => toggleLike(currentSong.id)}
+                  className="shrink-0 transition-transform hover:scale-110 active:scale-95"
+                  title={likedIds.includes(currentSong.id) ? "Remove from favorites" : "Add to favorites"}
+                >
+                  <Heart
+                    size={32}
+                    className={likedIds.includes(currentSong.id)
+                      ? "text-green-500 fill-green-500"
+                      : "text-gray-400 hover:text-white"}
+                  />
+                </button>
+              </div>
 
               <div className="flex items-center gap-3 text-green-100/90 text-xl sm:text-2xl">
                 <User size={26} className="text-green-400/80" />
@@ -354,6 +387,10 @@ export default function Home() {
                     <span>{isplaying ? 'Playing' : 'Paused'}</span>
                   </>
                 )}
+              </div>
+
+              <div className="w-full max-w-md">
+                <Visualizer audioRef={audioRef} isplaying={isplaying} />
               </div>
             </div>
           </div>
@@ -524,9 +561,19 @@ export default function Home() {
 
         <div
             className=" h-[70vh] max-h-[85vh] fixed inset-x-0 bg-[#181818] animate-slide-up backdrop-blur-2xl bottom-0 z-50 rounded-t-3xl overflow-auto shadow-2xl flex flex-col ">
-          <div className=" flex justify-between w-full p-3 bg-[#282828]  ">
+          <div className=" flex justify-between items-center w-full p-3 bg-[#282828]  ">
             <span>Queue</span>
-            <div className=" text-[#b3b3b3] " onClick={() => setmobileList(!mobileList)} > <ChevronDown /> </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setLikedOnly(!likedOnly)}
+                className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full transition
+                  ${likedOnly ? "bg-green-500/20 text-green-400" : "text-gray-400"}`}
+              >
+                <Heart size={14} className={likedOnly ? "fill-green-400" : ""} />
+                {likedIds.length}
+              </button>
+              <div className=" text-[#b3b3b3] " onClick={() => setmobileList(!mobileList)} > <ChevronDown /> </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 bg-[#282828] rounded-full px-3 py-2 mx-3 mt-3">
@@ -546,7 +593,9 @@ export default function Home() {
           </div>
 
           {filteredSongs.length === 0 && (
-            <span className="text-sm text-gray-500 px-4 py-3">No tracks match &quot;{search}&quot;</span>
+            <span className="text-sm text-gray-500 px-4 py-3">
+              {likedOnly && !query ? "No favorites yet — tap the heart on a song" : `No tracks match "${search}"`}
+            </span>
           )}
           {filteredSongs.map((song: Song) => (
             <div key={song.id} >
