@@ -19,6 +19,8 @@ export default function Home() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [mobileList, setmobileList] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
+  // while scrubbing: preview position in seconds, null when not dragging
+  const [dragTime, setDragTime] = useState<number | null>(null);
 
   const query = search.trim().toLowerCase();
   const filteredSongs = query
@@ -360,20 +362,42 @@ export default function Home() {
         <div className=" bg-[#181818] h-[17%] flex flex-col items-center justify-center px-4 lg:px-12 gap-4">
           <div className=" flex justify-center gap-3 items-center w-full ">
             <span className=" text-white/90 text-left ">
-              {getCurrentTime(currentTime)}
+              {getCurrentTime(dragTime ?? currentTime)}
             </span>
-            <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden relative cursor-pointer group"
-              onClick={(e) => {
-                if (!audioRef.current || !duration) return;
+            <div className="flex-1 h-2 bg-gray-700 rounded-full relative cursor-pointer group touch-none"
+              onPointerDown={(e) => {
+                if (!duration) return;
+                // capture so we keep getting move events outside the bar
+                e.currentTarget.setPointerCapture(e.pointerId);
                 const rect = e.currentTarget.getBoundingClientRect();
-                const clickPosition = e.clientX - rect.left;
-                const percentage = clickPosition / rect.width;
-                audioRef.current.currentTime = percentage * duration;
+                const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                setDragTime(pct * duration);
               }}
+              onPointerMove={(e) => {
+                if (dragTime === null || !duration) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                setDragTime(pct * duration);
+              }}
+              onPointerUp={() => {
+                if (dragTime === null) return;
+                if (audioRef.current) {
+                  audioRef.current.currentTime = dragTime;
+                  setCurrentTime(dragTime);
+                }
+                setDragTime(null);
+              }}
+              onPointerCancel={() => setDragTime(null)}
               >
-              <div className={` h-full bg-white/90 transition-all duration-150 ease-out `}
-                style={{ width:  duration > 0 ? `${(currentTime / duration) * 100}%` : "0%" }}
+              <div className={` h-full bg-white/90 rounded-full ${dragTime === null ? "transition-all duration-150 ease-out" : ""} `}
+                style={{ width: duration > 0 ? `${((dragTime ?? currentTime) / duration) * 100}%` : "0%" }}
                 />
+              {/* scrub handle: visible on hover or while dragging */}
+              <div
+                className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-white rounded-full shadow
+                  ${dragTime !== null ? "opacity-100 scale-110" : "opacity-0 group-hover:opacity-100"} transition-opacity`}
+                style={{ left: duration > 0 ? `${((dragTime ?? currentTime) / duration) * 100}%` : "0%" }}
+              />
             </div>
             <span className="text-white/90 text-sm font-medium text-right">
               {getCurrentTime(duration)}
@@ -402,6 +426,11 @@ export default function Home() {
               <button
                 className="w-8 h-8 flex items-center justify-center text-white/70 hover:text-white transition"
                 onClick={() => {
+                  // standard player behavior: >3s in restarts the track, otherwise go back
+                  if (audioRef.current && audioRef.current.currentTime > 3) {
+                    audioRef.current.currentTime = 0;
+                    return;
+                  }
                   previous();
                 }}
               >

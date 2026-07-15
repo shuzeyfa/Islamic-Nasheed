@@ -10,6 +10,7 @@ type queueState = {
     currentIndex: number,
     shuffle: boolean,
     repeat: RepeatMode,
+    history: number[],   // indexes actually played, so previous() retraces shuffle jumps
 
     //Action
     next: () => void,
@@ -30,6 +31,7 @@ export const useQueueStore = create<queueState>()(
     currentIndex: 0,
     shuffle: false,
     repeat: "off",
+    history: [],
 
     next: () => {
         const state = get();
@@ -46,13 +48,28 @@ export const useQueueStore = create<queueState>()(
             newIndex = state.currentIndex + 1;
         }
 
-        set({ currentIndex: newIndex });
+        if (newIndex === state.currentIndex) return;
+
+        set({
+            currentIndex: newIndex,
+            // cap history so it can't grow unbounded
+            history: [...state.history, state.currentIndex].slice(-100),
+        });
         syncSong(newIndex);
     },
 
     previous: () => {
         const state = get();
-        // first track + repeat-all wraps to the end
+
+        // retrace the actual play path first (matters in shuffle mode)
+        if (state.history.length > 0) {
+            const newIndex = state.history[state.history.length - 1];
+            set({ currentIndex: newIndex, history: state.history.slice(0, -1) });
+            syncSong(newIndex);
+            return;
+        }
+
+        // no history: first track + repeat-all wraps to the end
         const newIndex = state.currentIndex === 0
             ? (state.repeat === "all" ? mockSongs.length - 1 : 0)
             : state.currentIndex - 1;
@@ -61,8 +78,13 @@ export const useQueueStore = create<queueState>()(
     },
 
     setcurrentIndex: (newindex: number) => {
+        const state = get();
         const clamped = Math.max(0, Math.min(newindex, mockSongs.length - 1));
-        set({ currentIndex: clamped });
+        if (clamped === state.currentIndex) return;
+        set({
+            currentIndex: clamped,
+            history: [...state.history, state.currentIndex].slice(-100),
+        });
         syncSong(clamped);
     },
     toggleShuffle: () => set((s) => ({ shuffle: !s.shuffle })),
