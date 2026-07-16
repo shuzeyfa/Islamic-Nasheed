@@ -12,6 +12,7 @@ import { useDurationsStore, formatDuration } from "../../store/durationsStore";
 import { getArtist } from "../../lib/artists";
 import { playAudio, pauseAudio } from "../../lib/audioRef";
 import { useDominantColor } from "../../lib/useDominantColor";
+import AddToPlaylist from "../../components/AddToPlaylist";
 
 export default function ArtistPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = use(params);
@@ -105,7 +106,7 @@ export default function ArtistPage({ params }: { params: Promise<{ slug: string 
                             <div
                                 key={song.id}
                                 onClick={() => playSong(song.id)}
-                                className={`group grid grid-cols-[2rem_3rem_1fr_auto_auto] items-center gap-4 px-3 py-2 rounded-xl cursor-pointer transition
+                                className={`group grid grid-cols-[2rem_3rem_1fr_auto_auto_auto] items-center gap-4 px-3 py-2 rounded-xl cursor-pointer transition
                                     ${isCurrent ? "bg-white/10" : "hover:bg-white/5"}`}
                             >
                                 <span className={`text-sm text-right ${isCurrent ? "text-green-400" : "text-gray-500"}`}>
@@ -121,6 +122,9 @@ export default function ArtistPage({ params }: { params: Promise<{ slug: string 
                                         {song.title}
                                     </span>
                                     <span className="text-xs text-gray-400 truncate">{song.album}</span>
+                                </div>
+                                <div className={`transition ${liked ? "" : "opacity-0 group-hover:opacity-100"}`}>
+                                    <AddToPlaylist songId={song.id} />
                                 </div>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); toggleLike(song.id); }}

@@ -9,6 +9,7 @@ import { usePlayerStore } from "../store/playerStore";
 import { useQueueStore } from "../store/queueStore";
 import { useFavoritesStore } from "../store/favoritesStore";
 import { useDurationsStore } from "../store/durationsStore";
+import { usePlaylistsStore } from "../store/playlistsStore";
 import { audioRef } from "../lib/audioRef";
 import mockSongs from "../data/data";
 
@@ -23,6 +24,7 @@ export default function AudioEngine() {
         useQueueStore.persist.rehydrate();
         useFavoritesStore.persist.rehydrate();
         useDurationsStore.persist.rehydrate();
+        usePlaylistsStore.persist.rehydrate();
         // point currentSong at the restored queue position
         const { currentIndex } = useQueueStore.getState();
         usePlayerStore.getState().setcurrentSong(mockSongs[currentIndex]);

@@ -10,6 +10,7 @@ import { useFavoritesStore } from "../store/favoritesStore";
 import { useDurationsStore, formatDuration } from "../store/durationsStore";
 import { getArtists } from "../lib/artists";
 import { playAudio, pauseAudio } from "../lib/audioRef";
+import AddToPlaylist from "../components/AddToPlaylist";
 
 export default function LibraryPage() {
     const { currentSong, isplaying, play, pause } = usePlayerStore();
@@ -139,12 +140,14 @@ export default function LibraryPage() {
                                             </span>
                                             <span className="text-xs text-gray-400 truncate">{song.artist}</span>
                                         </div>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); toggleLike(song.id); }}
-                                            className={`shrink-0 pt-0.5 transition ${liked ? "" : "opacity-0 group-hover:opacity-100"}`}
-                                        >
-                                            <Heart size={15} className={liked ? "text-green-400 fill-green-400" : "text-gray-500 hover:text-white"} />
-                                        </button>
+                                        <div className={`shrink-0 pt-0.5 flex items-center gap-1.5 transition ${liked ? "" : "opacity-0 group-hover:opacity-100"}`}>
+                                            <AddToPlaylist songId={song.id} size={15} />
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); toggleLike(song.id); }}
+                                            >
+                                                <Heart size={15} className={liked ? "text-green-400 fill-green-400" : "text-gray-500 hover:text-white"} />
+                                            </button>
+                                        </div>
                                     </div>
                                     <span className="text-xs text-gray-500">
                                         {durations[song.id] ? formatDuration(durations[song.id]) : song.duration}
